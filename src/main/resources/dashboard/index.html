@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Static</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <script src="dashboard.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#main" data-text="skip">Skip to report</a>
+  <header class="masthead">
+    <a class="wordmark" href="./">Static<span>Volmit Software</span></a>
+    <p data-text="operator">Operator dashboard</p>
+    <button id="logout" hidden data-text="logout">Sign out</button>
+  </header>
+  <main id="main" tabindex="-1">
+    <section id="login" class="login">
+      <p class="eyebrow" data-text="readOnly">Read-only server reports</p>
+      <h1 data-text="signIn">Open your dashboard</h1>
+      <p data-text="tokenHint">Enter the access token from your server's dashboard/access-token file.</p>
+      <form id="login-form">
+        <label for="token" data-text="token">Access token</label>
+        <input id="token" type="password" autocomplete="off" spellcheck="false" required maxlength="512" aria-describedby="token-note">
+        <p id="token-note" class="muted" data-text="tokenNote">The token stays in this tab's memory. Closing or reloading the page signs you out.</p>
+        <button class="primary" type="submit" data-text="connect">Connect</button>
+      </form>
+      <p id="login-status" role="status" aria-live="polite"></p>
+    </section>
+    <div id="workspace" hidden>
+      <nav class="navigation" aria-label="Reports">
+        <button data-view="overview" aria-current="page" data-text="overview">Participation</button>
+        <button data-view="players" data-text="players">Players</button>
+        <button data-view="rankings" data-text="rankings">Rankings</button>
+        <button data-view="detailRankings" data-text="detailRankings">Detailed rankings</button>
+        <button data-view="seasons" data-text="seasons">Seasons</button>
+        <button data-view="milestones" data-text="milestones">Milestones</button>
+        <button data-view="comparison" data-text="comparison">Compare activity</button>
+      </nav>
+      <div class="report-heading"><div><p class="eyebrow" id="zone"></p><h1 id="title"></h1></div><button id="refresh" data-text="refresh">Refresh report</button></div>
+      <form id="overview-filters" class="filters">
+        <label><span data-text="period">Period</span><select name="period"><option value="day" data-text="day">Day</option><option value="week" data-text="week">Week</option><option value="month" data-text="month">Month</option></select></label>
+        <label><span data-text="offset">Windows ago</span><input name="offset" type="number" min="0" max="3650" step="1" value="0" required></label>
+        <button type="submit" data-text="apply">Apply</button>
+      </form>
+      <form id="players-filters" class="filters" hidden>
+        <label class="search"><span data-text="search">Player name or UUID</span><input name="query" type="search" maxlength="64" autocomplete="off"></label>
+        <button type="submit" data-text="searchAction">Search players</button>
+      </form>
+      <form id="rankings-filters" class="filters" hidden>
+        <label class="metric"><span data-text="statistic">Statistic</span><select name="stat"></select></label>
+        <label><span data-text="period">Period</span><select name="period"><option value="lifetime" data-text="lifetime">Lifetime</option><option value="day" data-text="day">Day</option><option value="week" data-text="week">Week</option><option value="month" data-text="month">Month</option></select></label>
+        <button type="submit" data-text="apply">Apply</button>
+      </form>
+      <form id="detailRankings-filters" class="filters" hidden>
+        <label class="metric"><span data-text="statistic">Statistic</span><select name="counter"></select></label><button type="submit" data-text="apply">Apply</button>
+      </form>
+      <form id="milestones-filters" class="filters" hidden>
+        <label class="search"><span data-text="playerUuid">Player UUID</span><input name="uuid" required autocomplete="off" maxlength="36"></label><button type="submit" data-text="apply">Apply</button>
+      </form>
+      <form id="comparison-filters" class="filters" hidden>
+        <label><span data-text="playerUuid">Player UUID</span><input name="uuid" required autocomplete="off" maxlength="36"></label>
+        <label><span data-text="otherUuid">Second player UUID (optional)</span><input name="other" autocomplete="off" maxlength="36"></label>
+        <label class="metric"><span data-text="statistic">Statistic</span><select name="stat"></select></label>
+        <label><span data-text="period">Period</span><select name="period"><option value="day" data-text="day">Day</option><option value="week" data-text="week">Week</option><option value="month" data-text="month">Month</option></select></label>
+        <label><span data-text="windows">Windows</span><input name="count" type="number" min="1" max="12" value="7" required></label>
+        <button type="submit" data-text="apply">Apply</button>
+      </form>
+      <p id="status" role="status" aria-live="polite"></p>
+      <section id="report" aria-labelledby="title"></section>
+      <div id="pagination" class="pagination" hidden><button id="previous" data-text="previous">Previous page</button><p id="page-summary"></p><button id="next" data-text="next">Next page</button></div>
+    </div>
+    <noscript>JavaScript is required to authenticate and load Static reports.</noscript>
+  </main>
+  <footer><span>Static</span><p data-text="footer">Statistics collected by this server. Retention and tracking settings affect these reports.</p></footer>
+</body>
+</html>

@@ -1,0 +1,91 @@
+name: Static
+version: '${version}'
+main: com.volmit.staticstats.StaticPlugin
+api-version: '26.1'
+folia-supported: true
+authors: [Volmit Software]
+website: https://volmit.com
+description: Player statistics, offline profiles, and rankings.
+softdepend: [PlaceholderAPI, Votifier, NuVotifier]
+commands:
+  static:
+    description: Static statistics and administration
+    usage: /static
+  stats:
+    description: Open a player statistics profile
+    aliases: [stat]
+    usage: /stats [player] [period]
+  leaderboard:
+    description: Show the highest player statistics
+    aliases: [leaderboards]
+    usage: /leaderboard [statistic] [page] [period]
+permissions:
+  static.stats:
+    default: true
+  static.stats.others:
+    default: true
+  static.top:
+    default: true
+  static.details:
+    default: true
+  static.details.others:
+    default: true
+  static.detailtop:
+    default: true
+  static.bests:
+    default: true
+  static.bests.others:
+    default: true
+  static.sessions:
+    default: true
+  static.sessions.others:
+    default: true
+  static.privacy:
+    default: true
+  static.privacy.others:
+    default: op
+  static.privacy.bypass:
+    default: op
+  static.participation:
+    default: op
+  static.milestones:
+    default: true
+  static.milestones.others:
+    default: true
+  static.seasons:
+    default: true
+  static.seasons.others:
+    default: true
+  static.language:
+    default: true
+  static.config:
+    default: op
+  static.status:
+    default: op
+  static.debug:
+    default: op
+  static.admin:
+    default: op
+    children:
+      static.stats: true
+      static.stats.others: true
+      static.top: true
+      static.details: true
+      static.details.others: true
+      static.detailtop: true
+      static.bests: true
+      static.bests.others: true
+      static.sessions: true
+      static.sessions.others: true
+      static.privacy: true
+      static.privacy.others: true
+      static.privacy.bypass: true
+      static.participation: true
+      static.milestones: true
+      static.milestones.others: true
+      static.seasons: true
+      static.seasons.others: true
+      static.language: true
+      static.config: true
+      static.status: true
+      static.debug: true

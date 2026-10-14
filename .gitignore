@@ -1,0 +1,62 @@
+# Build outputs
+.gradle/
+build/
+BUILDS/
+target/
+out/
+*.class
+dependency-reduced-pom.xml
+/build-lt.sh
+!gradle/wrapper/gradle-wrapper.jar
+
+# Editors
+.idea/
+.vscode/
+.run/
+.settings/
+.classpath
+.project
+*.iml
+
+# Local workspace files
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.agents/
+.codex/
+.claude/
+.codegraph/
+.worktrees/
+.local-notes/
+.superpowers/
+/HANDOFF.md
+/handoff.md
+/handoff-worktree.md
+local.properties
+.env
+.env.*
+!.env.example
+
+# Runtime and verification output
+run/
+logs/
+crash-reports/
+*.log
+*.log.gz
+*.hprof
+.qa/
+.repro/
+.perf/
+.release-gate/
+qa/reports/
+qa/viewer-*.json
+
+# OS and temporary files
+.DS_Store
+Thumbs.db
+Desktop.ini
+__pycache__/
+*.pyc
+*.tmp
+*.bak
+*.swp

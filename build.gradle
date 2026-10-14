@@ -1,0 +1,235 @@
+import org.gradle.api.attributes.Usage
+import org.gradle.api.attributes.java.TargetJvmVersion
+
+plugins {
+    id 'java-library'
+    id 'maven-publish'
+    id 'com.gradleup.shadow' version '9.0.0-rc3'
+}
+
+group = 'com.volmit'
+version = '2.0.0-26.1-26.3'
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    withSourcesJar()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.compilerArgs.add('-parameters')
+    options.encoding = 'UTF-8'
+    options.release.set(25)
+}
+
+repositories {
+    mavenCentral()
+    maven { url = uri('https://hub.spigotmc.org/nexus/content/repositories/snapshots/') }
+    maven { url = uri('https://repo.papermc.io/repository/maven-public/') }
+    maven { url = uri('https://repo.extendedclip.com/content/repositories/placeholderapi/') }
+    maven { url = uri('https://jitpack.io') }
+}
+
+configurations {
+    currentPaperCompatibility {
+        canBeConsumed = false
+        canBeResolved = true
+        attributes {
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_API))
+            attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 25)
+        }
+    }
+    currentSpigotCompatibility {
+        canBeConsumed = false
+        canBeResolved = true
+        attributes {
+            attribute(Usage.USAGE_ATTRIBUTE, objects.named(Usage, Usage.JAVA_API))
+            attribute(TargetJvmVersion.TARGET_JVM_VERSION_ATTRIBUTE, 25)
+        }
+    }
+}
+
+dependencies {
+    compileOnly('org.spigotmc:spigot-api:26.1-R0.1-SNAPSHOT')
+    compileOnly('me.clip:placeholderapi:2.11.6') { transitive = false }
+    implementation(providers.gradleProperty('volmLibCoordinate').orElse('com.github.VolmitSoftware:VolmLib:master-SNAPSHOT').get()) {
+        changing = true
+        transitive = false
+    }
+    implementation('com.google.code.gson:gson:2.10.1')
+    implementation('com.moandjiezana.toml:toml4j:0.7.2')
+    implementation('net.kyori:adventure-api:4.26.1')
+    implementation('net.kyori:adventure-text-minimessage:4.26.1')
+    implementation('net.kyori:adventure-text-serializer-legacy:4.26.1')
+    implementation('net.kyori:adventure-text-serializer-plain:4.26.1')
+    currentPaperCompatibility('io.papermc.paper:paper-api:26.3.build.140-beta')
+    currentSpigotCompatibility('org.spigotmc:spigot-api:26.3-R0.1-SNAPSHOT')
+    testImplementation(platform('org.junit:junit-bom:5.13.4'))
+    testImplementation('org.junit.jupiter:junit-jupiter')
+    testImplementation('org.assertj:assertj-core:3.27.4')
+    testImplementation('org.mockito:mockito-core:5.20.0')
+    testImplementation('org.spigotmc:spigot-api:26.1-R0.1-SNAPSHOT')
+    testImplementation('me.clip:placeholderapi:2.11.6') { transitive = false }
+    testRuntimeOnly('org.junit.platform:junit-platform-launcher')
+}
+
+List<String> languageLocales = fileTree('src/main/resources/languages') { include('*.toml') }
+        .files.collect { File source -> source.name.replace('.toml', '') }.sort()
+def languageManifest = tasks.register('generateLanguageSourceManifest', WriteProperties) {
+    destinationFile.set(layout.buildDirectory.file('generated/language-source/static-language-source.properties'))
+    property('revision', 'main')
+    property('locales', languageLocales.join(','))
+}
+
+tasks.named('processResources') {
+    dependsOn(languageManifest)
+    exclude('languages/*.toml')
+    from(languageManifest)
+    inputs.property('version', version)
+    filesMatching('plugin.yml') { expand(version: project.version) }
+}
+
+tasks.named('jar') { archiveClassifier.set('thin') }
+tasks.named('shadowJar') {
+    archiveClassifier.set('')
+    manifest.attributes('Multi-Release': 'true')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    relocate('art.arcane.volmlib', 'com.volmit.staticstats.libs.volmlib')
+    relocate('com.google.gson', 'com.volmit.staticstats.libs.gson')
+    relocate('com.moandjiezana.toml', 'com.volmit.staticstats.libs.toml')
+    relocate('net.kyori', 'com.volmit.staticstats.libs.kyori') { skipStringConstants = true }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    jvmArgs('-Dnet.bytebuddy.experimental=true')
+    systemProperty('static.projectDir', layout.projectDirectory.asFile.absolutePath)
+}
+
+sourceSets {
+    gameplayFixture {
+        java.srcDir('tools/gameplay/fixture/java')
+        resources.srcDir('tools/gameplay/fixture/resources')
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+    }
+}
+
+tasks.register('gameplayFixtureJar', Jar) {
+    group = 'verification'
+    description = 'Builds the cancellation and persistence fixture for isolated gameplay tests.'
+    archiveFileName.set('StaticFixture.jar')
+    destinationDirectory.set(layout.buildDirectory.dir('qa/fixture'))
+    from(sourceSets.gameplayFixture.output)
+}
+
+['Paper', 'Spigot'].each { String platform ->
+    tasks.register("compileCurrent${platform}Compatibility", JavaCompile) {
+        source = sourceSets.main.java
+        classpath = configurations.getByName("current${platform}Compatibility") + files(sourceSets.main.compileClasspath.filter {
+            File dependency -> !dependency.name.startsWith('spigot-api-')
+        })
+        destinationDirectory.set(layout.buildDirectory.dir("classes/java/current${platform}Compatibility"))
+        javaCompiler.set(javaToolchains.compilerFor { languageVersion = JavaLanguageVersion.of(25) })
+        options.release.set(25)
+    }
+}
+
+tasks.register('verifyJava25Artifact') {
+    dependsOn(tasks.named('shadowJar'))
+    inputs.file(tasks.named('shadowJar').flatMap { it.archiveFile })
+    doLast {
+        File artifact = tasks.named('shadowJar').get().archiveFile.get().asFile
+        new java.util.zip.ZipFile(artifact).withCloseable { java.util.zip.ZipFile archive ->
+            int metadata = 0
+            boolean mainClass = false
+            Properties manifest = new Properties()
+            java.util.jar.Manifest jarManifest = new java.util.jar.Manifest()
+            java.util.zip.ZipEntry manifestEntry = archive.getEntry('META-INF/MANIFEST.MF')
+            if (manifestEntry != null) {
+                archive.getInputStream(manifestEntry).withCloseable { InputStream input -> jarManifest.read(input) }
+            }
+            boolean multiRelease = 'true'.equalsIgnoreCase(jarManifest.mainAttributes.getValue('Multi-Release'))
+            archive.entries().each { java.util.zip.ZipEntry entry ->
+                if (entry.name == 'plugin.yml') {
+                    metadata++
+                    archive.getInputStream(entry).withCloseable { InputStream input ->
+                        if (!input.getText('UTF-8').contains("api-version: '26.1'")) {
+                            throw new GradleException('Static must declare Bukkit API 26.1')
+                        }
+                    }
+                }
+                if (entry.name.startsWith('languages/') && entry.name.endsWith('.toml')) {
+                    throw new GradleException("Runtime jar must not bundle language files: ${entry.name}")
+                }
+                if (entry.name.startsWith('art/arcane/volmlib/')) {
+                    throw new GradleException("Unrelocated shared class: ${entry.name}")
+                }
+                if (entry.name == 'static-language-source.properties') {
+                    archive.getInputStream(entry).withCloseable { InputStream input -> manifest.load(input) }
+                }
+                if (entry.name.endsWith('.class')) {
+                    new DataInputStream(archive.getInputStream(entry)).withCloseable { DataInputStream input ->
+                        if (input.readInt() != (int) 0xCAFEBABE) { throw new GradleException('Invalid class header') }
+                        int minor = input.readUnsignedShort()
+                        int major = input.readUnsignedShort()
+                        int maximumMajor = 69
+                        if (entry.name.startsWith('META-INF/versions/')) {
+                            java.util.regex.Matcher versionedClass = entry.name =~ /^META-INF\/versions\/([0-9]+)\/(.+)\.class$/
+                            if (!multiRelease || !versionedClass.matches() || Integer.parseInt(versionedClass.group(1)) < 9) {
+                                throw new GradleException("Invalid multi-release class: ${entry.name}")
+                            }
+                            maximumMajor = Integer.parseInt(versionedClass.group(1)) + 44
+                        }
+                        if (major > maximumMajor || minor == 65535) {
+                            throw new GradleException("Java 25 incompatible class: ${entry.name} (${major}.${minor})")
+                        }
+                        if (entry.name == 'com/volmit/staticstats/StaticPlugin.class') {
+                            mainClass = true
+                            if (major != 69) { throw new GradleException('Static must target Java 25 bytecode') }
+                        }
+                    }
+                }
+            }
+            if (metadata != 1) { throw new GradleException('Expected exactly one plugin.yml') }
+            if (!mainClass) { throw new GradleException('Missing Static plugin main class') }
+            ['dashboard/index.html', 'dashboard/dashboard.css', 'dashboard/dashboard.js', 'dashboard/public.html', 'dashboard/public.js'].each { String resource ->
+                if (archive.getEntry(resource) == null) {
+                    throw new GradleException("Missing dashboard resource: ${resource}")
+                }
+            }
+            if (archive.getEntry('dashboard/access-token') != null) {
+                throw new GradleException('Dashboard credentials must never be packaged')
+            }
+            if (manifest.getProperty('revision') != 'main' || manifest.getProperty('locales') != languageLocales.join(',')) {
+                throw new GradleException('Language manifest does not match repository sources')
+            }
+        }
+    }
+}
+
+tasks.named('check') {
+    dependsOn('compileCurrentPaperCompatibility', 'compileCurrentSpigotCompatibility', 'verifyJava25Artifact')
+}
+tasks.register('buildSwiftSwamp', Copy) {
+    group = 'development'
+    description = 'Verifies and stages Static in the workspace BUILDS directory.'
+    dependsOn('check', 'shadowJar')
+    from(tasks.named('shadowJar').flatMap { it.archiveFile })
+    into(file('../BUILDS'))
+    rename { String ignored -> 'Static.jar' }
+}
+tasks.named('build') { dependsOn('buildSwiftSwamp') }
+
+publishing {
+    publications {
+        staticStats(MavenPublication) {
+            artifactId = 'static'
+            artifact(tasks.named('shadowJar'))
+            artifact(tasks.named('sourcesJar'))
+            pom {
+                name = 'Static'
+                description = 'Player statistics and rankings for Bukkit servers.'
+                url = 'https://github.com/VolmitSoftware/Static'
+            }
+        }
+    }
+}

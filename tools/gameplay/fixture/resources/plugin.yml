@@ -1,0 +1,12 @@
+name: StaticFixture
+version: '1.0'
+main: com.volmit.staticfixture.StaticFixture
+api-version: '26.1'
+folia-supported: true
+depend: [Static]
+commands:
+  staticfixture:
+    permission: staticfixture.admin
+permissions:
+  staticfixture.admin:
+    default: op
